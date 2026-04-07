@@ -25,7 +25,7 @@ public class User {
     private String walletAddress;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = true)
+    @Column(nullable = false)
     private Role role;
 
     @Enumerated(EnumType.STRING)
@@ -41,6 +41,7 @@ public class User {
     private String nonce;
 
     // Used for forced logout / token invalidation
+    @Version
     @Column(name = "token_version")
     private Integer tokenVersion;
 
@@ -53,11 +54,24 @@ public class User {
     @PrePersist
     public void prePersist() {
         this.createdAt = LocalDateTime.now();
-        this.tokenVersion = 1;
+
+        if (this.role == null)
+            this.role = Role.GUEST;
+
+        if (this.accountStatus == null)
+            this.accountStatus = AccountStatus.ACTIVE;
+
+        if (this.isVerified == null)
+            this.isVerified = false;
+
+        if (this.tokenVersion == null)
+            this.tokenVersion = 1;
     }
 
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+    
+    
 }

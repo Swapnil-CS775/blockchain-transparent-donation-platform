@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 import com.ngoplatform.config.CryptoProperties;
+import com.ngoplatform.config.EncryptProperties;
 import com.ngoplatform.config.JwtProperties;
 import com.ngoplatform.config.SignzyProperties;
 import com.ngoplatform.external.ipfs.IpfsProperties;
@@ -12,6 +13,7 @@ import com.ngoplatform.external.ipfs.IpfsProperties;
 @EnableConfigurationProperties({JwtProperties.class,
 	SignzyProperties.class,
 	CryptoProperties.class,
+	EncryptProperties.class,
 	IpfsProperties.class
 	})
 @SpringBootApplication

@@ -18,17 +18,23 @@ public class WalletAuthService {
     private final JwtService jwtService;
 
     public String generateNonce(String walletAddress) {
+        String normalizedAddress = walletAddress.toLowerCase();
 
-    	String normalizedAddress = walletAddress.toLowerCase();
-
+        // 1. Fetch or Create with Defaults
         User user = userRepository.findByWalletAddress(normalizedAddress)
-                .orElseGet(() -> User.builder()
-                        .walletAddress(normalizedAddress)
-                        .role(null)
-                        .accountStatus(AccountStatus.ACTIVE)
-                        .build());
+                .orElseGet(() -> {
+                    User newUser = new User();
+                    newUser.setWalletAddress(normalizedAddress);
+                    newUser.setAccountStatus(AccountStatus.ACTIVE);
+                    newUser.setIsVerified(false);
+                    newUser.setTokenVersion(1);
+                    // Assign a default role so JwtService doesn't crash
+                    newUser.setRole(com.ngoplatform.common.enums.Role.GUEST); 
+                    return newUser;
+                });
 
         String nonce = generateRandomNonce();
+        String timestamp = Instant.now().toString();
 
         String message = """
                 ngoplatform.com wants you to sign in with your Ethereum account:
@@ -41,10 +47,11 @@ public class WalletAuthService {
                 Chain ID: 137
                 Nonce: %s
                 Issued At: %s
-                """.formatted(walletAddress, nonce, Instant.now());
+                """.formatted(walletAddress, nonce, timestamp);
 
-        user.setNonce(nonce);
-        userRepository.save(user);
+        user.setNonce(message); 
+        // 2. Save and FLUSH to ensure ID is generated immediately
+        userRepository.saveAndFlush(user); 
 
         return message;
     }
@@ -60,26 +67,12 @@ public class WalletAuthService {
         User user = userRepository.findByWalletAddress(walletAddress)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String nonce = user.getNonce();
-        if (nonce == null) throw new RuntimeException("Nonce expired");
+        // We retrieve the EXACT message that was signed
+        String signedMessage = user.getNonce(); 
+        if (signedMessage == null) throw new RuntimeException("Nonce expired");
 
-        // BUG FIX: Reconstruct the EXACT message the user signed
-        String fullMessage = """
-                ngoplatform.com wants you to sign in with your Ethereum account:
-                %s
-
-                Sign in to NGO Platform.
-
-                URI: https://ngoplatform.com
-                Version: 1
-                Chain ID: 137
-                Nonce: %s
-                Issued At: %s
-                """.formatted(walletAddress, nonce, user.getUpdatedAt().toString()); 
-                // Note: You should ideally store the 'Issued At' timestamp in the DB 
-                // alongside the nonce to ensure they match perfectly here.
-
-        String recoveredAddress = SignatureUtil.recoverAddress(fullMessage, signature);
+        // Use your existing SignatureUtil
+        String recoveredAddress = SignatureUtil.recoverAddress(signedMessage, signature);
 
         if (!recoveredAddress.equalsIgnoreCase(walletAddress)) {
             throw new RuntimeException("Invalid signature");

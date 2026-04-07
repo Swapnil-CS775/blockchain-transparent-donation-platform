@@ -4,6 +4,7 @@ import com.ngoplatform.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -23,6 +24,9 @@ public class DonorProfile {
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
+    
+    @Column(name = "total_donated", precision = 18, scale = 2)
+    private BigDecimal totalDonated = BigDecimal.ZERO;
 
     private String fullName;
 
@@ -33,6 +37,16 @@ public class DonorProfile {
     private String panNumber;
 
     private Boolean panVerified;
+    
+    private Boolean termsAccepted;
+    
+    private LocalDateTime termsAcceptedAt;
+    
+    private String termsVersion;
+    
+    private String acceptedIpAddress;
+    
+    private String acceptedUserAgent;
 
     private LocalDateTime createdAt;
 

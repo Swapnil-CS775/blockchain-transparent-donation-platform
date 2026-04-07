@@ -25,12 +25,10 @@ public class JwtService {
     public String generateToken(User user) {
 
         return Jwts.builder()
-                .claim("userId", user.getId())
-                .claim("walletAddress", user.getWalletAddress())
+                .setSubject(user.getWalletAddress())
+                .claim("uid", user.getId().toString())
                 .claim("role", user.getRole().name())
-                .claim("accountStatus", user.getAccountStatus().name())
-                .claim("isVerified", user.getIsVerified())
-                .claim("tokenVersion", user.getTokenVersion())
+                .claim("tv", user.getTokenVersion())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtProperties.getExpiration()))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
@@ -46,17 +44,17 @@ public class JwtService {
     }
 
     public String extractWallet(String token) {
-        return extractAllClaims(token).get("walletAddress", String.class);
+    	return extractAllClaims(token).getSubject();
     }
 
     public boolean isTokenValid(String token, User user) {
 
-        final String wallet = extractWallet(token);
+        Claims claims = extractAllClaims(token);
 
-        return wallet.equals(user.getWalletAddress())
+        return claims.getSubject().equalsIgnoreCase(user.getWalletAddress())
                 && !isTokenExpired(token)
-                && extractAllClaims(token).get("tokenVersion", Integer.class)
-                .equals(user.getTokenVersion());
+                && claims.get("tv", Integer.class)
+                   .equals(user.getTokenVersion());
     }
 
     private boolean isTokenExpired(String token) {

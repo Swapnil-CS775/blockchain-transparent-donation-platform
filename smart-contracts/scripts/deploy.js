@@ -4,6 +4,13 @@ async function main() {
   const [admin] = await hre.ethers.getSigners();
   console.log("Deploying with admin:", admin.address);
 
+  // 0 MockUSDT
+  const MockUSDT = await hre.ethers.getContractFactory("MockUSDT");
+  const mockUSDT = await MockUSDT.deploy(); 
+  await mockUSDT.waitForDeployment();
+  const usdtAddr = await mockUSDT.getAddress();
+  console.log("MockUSDT Deployed at:", usdtAddr);
+
   // 1️⃣ NGORegistration
   const NGORegistration = await hre.ethers.getContractFactory("NGORegistration");
   const ngoRegistry = await NGORegistration.deploy();
@@ -14,7 +21,7 @@ async function main() {
 
   // 2️⃣ DonationManager
   const DonationManager = await hre.ethers.getContractFactory("DonationManager");
-  const donationManager = await DonationManager.deploy(ngoAddr);
+  const donationManager = await DonationManager.deploy(ngoAddr,usdtAddr);
   await donationManager.waitForDeployment();
   const dmAddr = await donationManager.getAddress();
 
@@ -35,6 +42,7 @@ async function main() {
   console.log("Reputation contract linked to DonationManager");
 
   console.log("\n=== FINAL DEPLOYMENT SUMMARY ===");
+  console.log("MockUSDT (USDT):", usdtAddr);
   console.log("NGORegistration:", ngoAddr);
   console.log("DonationManager:", dmAddr);
   console.log("ReputationManager:", rmAddr);

@@ -23,9 +23,10 @@ public class SignzyService {
             mock.setPanNumber(panNumber);
             mock.setFullName(name);
             mock.setStatus("MOCK_VERIFIED");
+            System.out.println("returned from mock");
             return mock;
         }
-
+        System.out.println("from mock");
         PanVerificationResponse response = client.verifyPan(panNumber, name);
 
         if (response == null || !response.isValid()) {

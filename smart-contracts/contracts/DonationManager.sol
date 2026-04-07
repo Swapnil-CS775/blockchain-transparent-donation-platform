@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
+//new update
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 interface INGORegistry {
     function isVarifiedNGO(address ngo) external view returns (bool);
 }
@@ -10,10 +13,14 @@ contract DonationManager {
     address public ngoRegistry;
     address public reputationContract;
 
+    //new update
+    IERC20 public usdtToken;
 
-    constructor(address _ngoRegistry) {
+    constructor(address _ngoRegistry,address _usdtAddress) {
         admin = msg.sender;
         ngoRegistry = _ngoRegistry;
+        //new update
+        usdtToken = IERC20(_usdtAddress);
     }
 
     // ************* EVENTS **************
@@ -31,6 +38,7 @@ contract DonationManager {
         address ngo;
         uint targetAmount;
         uint raisedAmount;
+        uint totalPaid;
         uint milestoneIndex;
         uint[3] milestoneBudget;
         bool[3] milestoneComplete;
@@ -43,6 +51,7 @@ contract DonationManager {
     mapping(uint => mapping(uint => string)) public milestoneProof;
     mapping(uint => mapping(address => uint)) public donorAmounts;
     mapping(uint=>mapping(address=>bool)) public hasDonated;
+    mapping(uint => uint) public campaignBalance;
 
     uint public campaignCount;
 
@@ -66,6 +75,7 @@ contract DonationManager {
         c.targetAmount = targetAmount;
         c.raisedAmount = 0;
         c.milestoneIndex = 0;
+        c.totalPaid=0;
         c.milestoneBudget = [m1, m2, m3];
         c.isActive = true;
         c.firstMilestonePaid = false;
@@ -77,18 +87,23 @@ contract DonationManager {
     }
 
     // ************* DONATE **************
-    function donate(uint campaignId) public payable {
+    function donate(uint campaignId,uint amount) public payable {
         Campaign storage c = campaigns[campaignId];
 
         require(c.isActive, "Campaign closed");
-        require(msg.value > 0, "Send ETH");
+        require(amount > 0, "Amount must be > 0");
         require(!c.fundingClosed, "Funding already completed");
 
+        require(
+            usdtToken.transferFrom(msg.sender, address(this), amount),
+            "USDT transfer failed"
+        );
+        campaignBalance[campaignId] += amount;
         uint remaining = c.targetAmount - c.raisedAmount;
 
         if (remaining > 0) {
-            if (msg.value <= remaining) {
-                c.raisedAmount += msg.value;
+            if (amount <= remaining) {
+                c.raisedAmount += amount;
             } else {
                 c.raisedAmount = c.targetAmount;
                 c.fundingClosed = true;
@@ -97,14 +112,25 @@ contract DonationManager {
         }
 
         // store full contributed amount for reference
-        donorAmounts[campaignId][msg.sender] += msg.value;
+        donorAmounts[campaignId][msg.sender] += amount;
         hasDonated[campaignId][msg.sender] = true;
 
-        emit DonationReceived(campaignId, msg.sender, msg.value);
+        emit DonationReceived(campaignId, msg.sender, amount);
 
         //Auto release first milestone
         if (!c.firstMilestonePaid && c.raisedAmount >= c.milestoneBudget[0]) {
-            payable(c.ngo).transfer(c.milestoneBudget[0]);
+            require(
+                campaignBalance[campaignId] >= c.milestoneBudget[0],
+                "Not enough campaign funds"
+            );
+
+            campaignBalance[campaignId] -= c.milestoneBudget[0];
+
+            require(
+                usdtToken.transfer(c.ngo, c.milestoneBudget[0]),
+                "Milestone transfer failed"
+            );
+
             c.firstMilestonePaid = true;
 
             emit FirstMilestoneReleased(
@@ -149,11 +175,14 @@ function verifyMilestone(uint campaignId) public {
 
         // *** CHECK If enough ETH is collected ***
         require(
-            address(this).balance >= nextAmount,
-            "Not enough funds yet. Wait for more donations."
+            campaignBalance[campaignId] >= nextAmount,
+            "Not enough funds for this campaign"
         );
 
-        payable(c.ngo).transfer(nextAmount);
+        campaignBalance[campaignId] -= nextAmount;
+
+        c.totalPaid += nextAmount;
+        require(usdtToken.transfer(c.ngo, nextAmount), "Transfer failed");
         emit MilestoneApproved(campaignId, c.milestoneIndex, nextAmount);
     } else {
         // Last milestone – no new funds sent here
@@ -177,11 +206,14 @@ function verifyMilestone(uint campaignId) public {
         require(msg.sender == admin, "Admin only");
         require(!c.isActive, "Campaign not finished"); // Wait until milestones done
 
-        uint contractBal = address(this).balance;
-        require(contractBal > 0, "No surplus");
+        uint surplus = campaignBalance[campaignId];
+        require(surplus > 0, "No surplus");
 
-        payable(admin).transfer(contractBal);
-        emit SurplusWithdrawn(campaignId, contractBal);
+        campaignBalance[campaignId] = 0;
+
+        require(usdtToken.transfer(admin, surplus), "Withdrawal failed");
+
+        emit SurplusWithdrawn(campaignId, surplus);
     }
 
     function setReputationContract(address _rep) public {

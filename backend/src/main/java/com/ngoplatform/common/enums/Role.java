@@ -4,5 +4,6 @@ public enum Role {
 	 SUPER_ADMIN,
 	 VERIFIER,
 	 NGO,
-	 DONOR
+	 DONOR,
+	 GUEST
 }

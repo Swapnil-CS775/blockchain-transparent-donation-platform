@@ -1,7 +1,6 @@
 package com.ngoplatform.ngo.dto;
 
 import lombok.Data;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 
@@ -22,14 +21,15 @@ public class NgoRegistrationRequest {
     private String registrationType;
     private String registrationNumber;
     private LocalDate incorporationDate;
-    private MultipartFile registrationCertificate;
 
     // 80G
     private String eightyGNumber;
     private LocalDate eightyGValidityDate;
-    private MultipartFile eightyGCertificate;
 
     // 12A
     private String twelveANumber;
-    private MultipartFile twelveACertificate;
+    
+    private String registrationCertificateCid;
+    private String eightyGCertificateCid;
+    private String twelveACertificateCid;
 }

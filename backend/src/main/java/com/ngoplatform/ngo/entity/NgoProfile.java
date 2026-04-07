@@ -1,5 +1,6 @@
 package com.ngoplatform.ngo.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.ngoplatform.common.enums.OnboardingStatus;
 import com.ngoplatform.user.entity.User;
 import jakarta.persistence.*;
@@ -7,6 +8,7 @@ import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -25,6 +27,7 @@ public class NgoProfile {
     // Linked wallet user
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @JsonIgnore
     private User user;
 
     // -----------------------
@@ -105,6 +108,23 @@ public class NgoProfile {
 	 private String acceptedIpAddress;
 	
 	 private String acceptedUserAgent;
+	 
+	// Inside NgoProfile.java
+	 @OneToMany(mappedBy = "ngoProfile", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+	 @JsonIgnore
+	 private List<NgoStakeholder> stakeholders;
+	 
+	 @Column(length = 1000)
+	 private String rejectionReason;
+	 
+	 @Column(name = "reputation_score")
+	 @Builder.Default
+	 private Double reputationScore = 0.0;
+	 
+	 
+	 @Column(name = "active_campaigns_count")
+	 @Builder.Default
+	 private Long activeCampaignsCount = 0L;
 
     @PrePersist
     public void onCreate() {

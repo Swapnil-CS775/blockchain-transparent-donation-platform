@@ -9,4 +9,5 @@ public class DonorRegistrationDto {
 	    private String email;
 	    private String country;
 	    private String panNumber;
+	    private Boolean termsAccepted;
 }

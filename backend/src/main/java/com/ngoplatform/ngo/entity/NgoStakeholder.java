@@ -32,7 +32,7 @@ public class NgoStakeholder {
     private Boolean panVerified;
 
     private String email;
-
+    
     private String phone;
 
     private LocalDateTime createdAt;
